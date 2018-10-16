@@ -3,6 +3,7 @@
 #include <exception> // exception
 #include <stdexcept> // runtime_error
 #include <string> // to_string
+#include <iostream>
 
 namespace nlohmann
 {
@@ -125,6 +126,7 @@ class parse_error : public exception
         std::string w = exception::name("parse_error", id_) + "parse error" +
                         (byte_ != 0 ? (" at " + std::to_string(byte_)) : "") +
                         ": " + what_arg;
+        std::cout << "parse_error: " << w << std::endl;
         return parse_error(id_, byte_, w.c_str());
     }
 

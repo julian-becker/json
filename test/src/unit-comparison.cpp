@@ -169,6 +169,18 @@ TEST_CASE("lexicographical comparison operators")
             CHECK( (nullptr != j_null) == not(nullptr == j_null));
         }
 
+        SECTION("UINT64_MAX shall not equal -1")
+        {
+            json uint64max(static_cast<std::uint64_t>(UINT64_MAX));
+            CHECK(uint64max.is_number_unsigned());
+            CHECK(UINT64_MAX == -1);
+
+            json min1(-1);
+            CHECK(min1.is_number_integer());
+
+            CHECK(uint64max != min1);
+        }
+
         SECTION("comparison: less")
         {
             std::vector<std::vector<bool>> expected =

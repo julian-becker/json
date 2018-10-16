@@ -602,6 +602,7 @@ struct is_compatible_type
 #include <exception> // exception
 #include <stdexcept> // runtime_error
 #include <string> // to_string
+#include <iostream>
 
 namespace nlohmann
 {
@@ -724,6 +725,7 @@ class parse_error : public exception
         std::string w = exception::name("parse_error", id_) + "parse error" +
                         (byte_ != 0 ? (" at " + std::to_string(byte_)) : "") +
                         ": " + what_arg;
+        std::cout << "parse_error: " << w << std::endl;
         return parse_error(id_, byte_, w.c_str());
     }
 
@@ -5962,6 +5964,7 @@ class output_adapter
 // #include <nlohmann/detail/value_t.hpp>
 
 
+#include <iostream>
 namespace nlohmann
 {
 namespace detail
@@ -6005,6 +6008,8 @@ class binary_reader
                    json_sax_t* sax_,
                    const bool strict = true)
     {
+        std::cout << "MARK..." << std::endl;
+
         sax = sax_;
         bool result = false;
 
@@ -6023,7 +6028,9 @@ class binary_reader
                 break;
 
             case input_format_t::bson:
+                std::cout << "MARK___" << std::endl;
                 result = parse_bson_internal();
+                std::cout << "MARK0: result=" << result << std::endl;
                 break;
 
             // LCOV_EXCL_START
@@ -6031,10 +6038,12 @@ class binary_reader
                 assert(false);
                 // LCOV_EXCL_STOP
         }
+        std::cout << "MARK1: result=" << result << std::endl;
 
         // strict mode: next byte must be EOF
         if (result and strict)
         {
+            std::cout << "MARK2: result=" << result << std::endl;
             if (format == input_format_t::ubjson)
             {
                 get_ignore_noop();
@@ -6046,8 +6055,10 @@ class binary_reader
 
             if (JSON_UNLIKELY(current != std::char_traits<char>::eof()))
             {
+                std::cout << "MARK3" << std::endl;
                 return sax->parse_error(chars_read, get_token_string(), parse_error::create(110, chars_read, "expected end of input"));
             }
+            std::cout << "MARK4: result=" << result << std::endl;
         }
 
         return result;
@@ -6080,13 +6091,17 @@ class binary_reader
         auto out = std::back_inserter(result);
         while (true)
         {
+            std::cout << "get_bson_cstr: chars_read=" << chars_read << " (-)" << std::endl;
             get();
+            std::cout << "get_bson_cstr: chars_read=" << chars_read << " (A)" << std::endl;
             if (JSON_UNLIKELY(not unexpect_eof()))
             {
+                std::cout << "get_bson_cstr: chars_read=" << chars_read << " (B)" << std::endl;
                 return false;
             }
             if (current == 0x00)
             {
+                std::cout << "get_bson_cstr: chars_read=" << chars_read << " (C)" << std::endl;
                 return true;
             }
             *out++ = static_cast<char>(current);
@@ -6198,10 +6213,18 @@ class binary_reader
     {
         while (auto element_type = get())
         {
+            std::cout << "chars_read=" << chars_read << ", GOT: " << element_type << std::endl;
+            if (JSON_UNLIKELY(not unexpect_eof()))
+            {
+                std::cout << "eof 1: chars_read=" << chars_read << ", GOT: " << element_type << std::endl;
+                return false;
+            }
+
             const std::size_t element_type_parse_position = chars_read;
             string_t key;
             if (JSON_UNLIKELY(not get_bson_cstr(key)))
             {
+                std::cout << "eof 2: chars_read=" << chars_read << ", GOT: " << element_type << std::endl;
                 return false;
             }
 
@@ -6249,15 +6272,19 @@ class binary_reader
         std::int32_t documentSize;
         get_number<std::int32_t, true>(documentSize);
 
+        std::cout << "chars_read=" << chars_read << " (A)" << std::endl;
         if (JSON_UNLIKELY(not sax->start_object(-1)))
         {
+            std::cout << "chars_read=" << chars_read << " (B)" << std::endl;
             return false;
         }
-
+        std::cout << "chars_read=" << chars_read << " (C)" << std::endl;
         if (JSON_UNLIKELY(not parse_bson_element_list(/*is_array*/false)))
         {
+            std::cout << "chars_read=" << chars_read << " (D)" << std::endl;
             return false;
         }
+        std::cout << "chars_read=" << chars_read << " (E)" << std::endl;
 
         return sax->end_object();
     }
@@ -7805,6 +7832,7 @@ class binary_reader
     {
         if (JSON_UNLIKELY(current == std::char_traits<char>::eof()))
         {
+            std::cout << "unexpect_eof: chars_read=" << chars_read << " " << std::endl;
             return sax->parse_error(chars_read, "<end of file>", parse_error::create(110, chars_read, "unexpected end of input"));
         }
         return true;
@@ -17104,10 +17132,18 @@ class basic_json
         }
         else if (lhs_type == value_t::number_unsigned and rhs_type == value_t::number_integer)
         {
+            if (lhs.m_value.number_unsigned > static_cast<NumberUnsignedType>((std::numeric_limits<NumberIntegerType>::max)()))
+            {
+                return false;
+            }
             return (static_cast<number_integer_t>(lhs.m_value.number_unsigned) == rhs.m_value.number_integer);
         }
         else if (lhs_type == value_t::number_integer and rhs_type == value_t::number_unsigned)
         {
+            if (rhs.m_value.number_unsigned > static_cast<NumberUnsignedType>((std::numeric_limits<NumberIntegerType>::max)()))
+            {
+                return false;
+            }
             return (lhs.m_value.number_integer == static_cast<number_integer_t>(rhs.m_value.number_unsigned));
         }
 

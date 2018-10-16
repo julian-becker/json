@@ -5528,10 +5528,18 @@ class basic_json
         }
         else if (lhs_type == value_t::number_unsigned and rhs_type == value_t::number_integer)
         {
+            if (lhs.m_value.number_unsigned > static_cast<NumberUnsignedType>((std::numeric_limits<NumberIntegerType>::max)()))
+            {
+                return false;
+            }
             return (static_cast<number_integer_t>(lhs.m_value.number_unsigned) == rhs.m_value.number_integer);
         }
         else if (lhs_type == value_t::number_integer and rhs_type == value_t::number_unsigned)
         {
+            if (rhs.m_value.number_unsigned > static_cast<NumberUnsignedType>((std::numeric_limits<NumberIntegerType>::max)()))
+            {
+                return false;
+            }
             return (lhs.m_value.number_integer == static_cast<number_integer_t>(rhs.m_value.number_unsigned));
         }
 
